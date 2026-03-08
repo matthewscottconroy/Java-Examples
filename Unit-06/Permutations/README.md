@@ -68,7 +68,7 @@ mvn test
 
 # Package into a runnable jar
 mvn package
-java -jar target/packages-1.0-SNAPSHOT.jar
+java -jar target/permutations-1.0-SNAPSHOT.jar
 
 # Generate Javadocs (output: target/site/apidocs/index.html)
 mvn javadoc:javadoc

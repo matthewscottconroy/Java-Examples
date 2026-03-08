@@ -6,12 +6,12 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>com.examples</groupId>
-    <artifactId>packages</artifactId>
+    <artifactId>conversions</artifactId>
     <version>1.0-SNAPSHOT</version>
     <packaging>jar</packaging>
 
-    <name>Packages</name>
-    <description>A Maven project demonstrating package organization via permutation algebra.</description>
+    <name>Conversions</name>
+    <description>A Maven project demonstrating package organization via a unit conversion library.</description>
 
     <properties>
         <maven.compiler.source>17</maven.compiler.source>
@@ -21,7 +21,6 @@
     </properties>
 
     <dependencies>
-        <!-- JUnit Jupiter — the standard Java unit test framework -->
         <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter</artifactId>
@@ -32,7 +31,6 @@
 
     <build>
         <plugins>
-            <!-- Compile with Java 17 -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
@@ -43,24 +41,12 @@
                 </configuration>
             </plugin>
 
-            <!-- Run tests with JUnit 5 -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>3.2.5</version>
             </plugin>
 
-            <!-- Generate Javadocs; suppress missing-tag warnings -->
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-javadoc-plugin</artifactId>
-                <version>3.6.3</version>
-                <configuration>
-                    <doclint>all,-missing</doclint>
-                </configuration>
-            </plugin>
-
-            <!-- Build a runnable fat jar -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-jar-plugin</artifactId>
@@ -74,13 +60,21 @@
                 </configuration>
             </plugin>
 
-            <!-- Allow `mvn exec:java` to run the main class -->
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>exec-maven-plugin</artifactId>
                 <version>3.1.1</version>
                 <configuration>
                     <mainClass>com.examples.app.Main</mainClass>
+                </configuration>
+            </plugin>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-javadoc-plugin</artifactId>
+                <version>3.6.3</version>
+                <configuration>
+                    <doclint>all,-missing</doclint>
                 </configuration>
             </plugin>
         </plugins>
