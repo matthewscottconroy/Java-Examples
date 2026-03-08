@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+                             https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>com.examples</groupId>
+    <artifactId>hello-library</artifactId>
+    <version>1.0-SNAPSHOT</version>
+    <packaging>jar</packaging>     <!-- still produces a JAR — just no Main-Class in the manifest -->
+
+    <name>HelloLibrary</name>
+    <description>A reusable code library with no main method, intended to be consumed as a dependency.</description>
+
+    <properties>
+        <maven.compiler.source>17</maven.compiler.source>
+        <maven.compiler.target>17</maven.compiler.target>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <junit.version>5.10.2</junit.version>
+    </properties>
+
+    <dependencies>
+        <!-- Libraries are still tested — they just have no application entry point -->
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <version>${junit.version}</version>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>3.2.5</version>
+            </plugin>
+            <!--
+                No exec-maven-plugin here — there is no main class to run.
+                Install to the local Maven repository with: mvn install
+                Other projects can then declare this as a <dependency>.
+            -->
+        </plugins>
+    </build>
+</project>

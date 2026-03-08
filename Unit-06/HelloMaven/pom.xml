@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+                             https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <!--
+        Project coordinates — the unique address of this artifact in Maven's world.
+        Any project that wants to depend on this one will reference it by these three values.
+    -->
+    <groupId>com.examples</groupId>      <!-- organisation, like a reversed domain name  -->
+    <artifactId>hello-maven</artifactId> <!-- name of this specific project               -->
+    <version>1.0-SNAPSHOT</version>      <!-- SNAPSHOT = still in development             -->
+    <packaging>jar</packaging>           <!-- output type: jar, war, pom, …               -->
+
+    <name>HelloMaven</name>
+    <description>Minimal Maven project demonstrating the standard directory layout and build lifecycle.</description>
+
+    <!--
+        Properties are key/value pairs reused throughout the POM.
+        The two compiler properties tell the compiler plugin which Java version to target.
+    -->
+    <properties>
+        <maven.compiler.source>17</maven.compiler.source>
+        <maven.compiler.target>17</maven.compiler.target>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    </properties>
+
+    <build>
+        <plugins>
+            <!--
+                exec-maven-plugin — runs a compiled class directly without building a JAR first.
+                Usage: mvn exec:java
+            -->
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>exec-maven-plugin</artifactId>
+                <version>3.1.1</version>
+                <configuration>
+                    <mainClass>com.examples.hello.Main</mainClass>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+</project>
