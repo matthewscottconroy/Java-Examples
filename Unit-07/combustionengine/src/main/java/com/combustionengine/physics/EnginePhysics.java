@@ -69,10 +69,10 @@ public final class EnginePhysics {
     private static final double HEAT_SCALE    = 0.25;
 
     /** Linear load torque coefficient: T_load = K_LOAD · ω  (N·m·s/rad). */
-    private static final double K_LOAD        = 0.14;
+    private static final double K_LOAD        = 0.05;
 
     /** Linear friction torque coefficient: T_fric = K_FRIC · ω  (N·m·s/rad). */
-    private static final double K_FRIC        = 0.04;
+    private static final double K_FRIC        = 0.015;
 
     /** Angular velocity below which the engine is considered stalled (rad/s ≈ 100 RPM). */
     public static final double STALL_OMEGA    = 10.5;
@@ -101,13 +101,44 @@ public final class EnginePhysics {
 
             CyclePhase after = cyl.currentPhase();
 
-            // Detect power-stroke entry for combustion flash
-            if (before != CyclePhase.POWER && after == CyclePhase.POWER) {
-                cyl.combustionGlow = Math.min(1.0, state.throttle * 1.2 + 0.1);
+            // ── Stroke transition effects ─────────────────────────────────────
+            if (before != after) {
+                switch (after) {
+                    case INTAKE -> {
+                        // Intake valve opens: start filling the bore with charge
+                        cyl.gasLevel = 0.0;
+                    }
+                    case POWER -> {
+                        // Spark fires: combustion glow + shockwave flash
+                        cyl.combustionGlow  = Math.min(1.0, state.throttle * 1.2 + 0.1);
+                        cyl.explosionFlash  = Math.min(1.0, state.throttle * 1.1 + 0.15);
+                        cyl.gasLevel        = 1.0;
+                    }
+                    case EXHAUST -> {
+                        // Exhaust valve opens: charge starts leaving
+                        cyl.gasLevel = 1.0;
+                    }
+                    default -> {}
+                }
             }
 
-            // Fade combustion glow
-            cyl.combustionGlow = Math.max(0.0, cyl.combustionGlow - dt * 7.0);
+            // ── Continuous per-stroke updates ─────────────────────────────────
+            switch (after) {
+                case INTAKE -> {
+                    // Fill rate proportional to how fast the piston is descending
+                    cyl.gasLevel = Math.min(1.0, cyl.gasLevel + dt * 4.0 * state.simSpeed);
+                }
+                case EXHAUST -> {
+                    // Purge rate proportional to piston ascending speed
+                    cyl.gasLevel = Math.max(0.0, cyl.gasLevel - dt * 4.0 * state.simSpeed);
+                }
+                default -> {}
+            }
+
+            // Combustion glow fades during power stroke
+            cyl.combustionGlow  = Math.max(0.0, cyl.combustionGlow  - dt * 5.0);
+            // Explosion flash fades very quickly (it's a brief spark event)
+            cyl.explosionFlash  = Math.max(0.0, cyl.explosionFlash  - dt * 12.0);
 
             // Slider-crank kinematics
             double phi = cyl.crankAngleRad();

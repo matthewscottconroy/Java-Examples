@@ -55,6 +55,20 @@ public class CylinderState {
     /** Combustion glow intensity [0, 1]; fades after ignition events. */
     public double combustionGlow;
 
+    /**
+     * Intake gas fill level [0, 1]: rises during INTAKE as the bore fills with
+     * the blue air-fuel charge, held at 1 through COMPRESSION/POWER, drops to 0
+     * during EXHAUST as burned gases leave.
+     */
+    public double gasLevel;
+
+    /**
+     * Brief shockwave ring flash [0, 1] triggered at the start of the POWER
+     * stroke (spark ignition). Fades quickly and is drawn as an expanding ring
+     * to distinguish it from the slower combustion glow.
+     */
+    public double explosionFlash;
+
     /** Phase on the previous physics tick, used to detect stroke transitions. */
     public CyclePhase prevPhase;
 

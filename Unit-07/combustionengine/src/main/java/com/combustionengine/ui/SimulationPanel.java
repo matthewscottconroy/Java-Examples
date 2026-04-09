@@ -114,7 +114,7 @@ public final class SimulationPanel extends JPanel {
 
     private void tick() {
         long now = System.nanoTime();
-        double dt = Math.min((now - lastNano) / 1e9, 0.05);
+        double dt = Math.min((now - lastNano) / 1e9, 0.05) * state.simSpeed;
         lastNano = now;
 
         if (!paused) {
@@ -246,10 +246,39 @@ public final class SimulationPanel extends JPanel {
             g2.setStroke(new BasicStroke(1.0f));
         }
 
-        // ── Combustion glow ───────────────────────────────────────────────────
+        // ── Gas fill (intake = blue-green charge, exhaust = orange-grey fumes) ──
+        int boreH = Math.max(1, pistonTopY - HEAD_Y);
+        if (cyl.gasLevel > 0.01) {
+            Shape oldClip = g2.getClip();
+            g2.clipRect(boreLeft, HEAD_Y, BORE_PX, boreH + 2);
+
+            CyclePhase gasPhase = cyl.currentPhase();
+            Color gasCol;
+            if (gasPhase == CyclePhase.INTAKE) {
+                // Fresh blue-green air-fuel charge
+                int alpha = (int)(cyl.gasLevel * 130);
+                gasCol = new Color(40, 160, 220, alpha);
+            } else if (gasPhase == CyclePhase.EXHAUST) {
+                // Brownish exhaust fumes
+                int alpha = (int)(cyl.gasLevel * 100);
+                gasCol = new Color(160, 110, 50, alpha);
+            } else {
+                // Compressed/burning charge — deeper blue held at full
+                int alpha = (int)(cyl.gasLevel * 80);
+                gasCol = new Color(30, 80, 180, alpha);
+            }
+
+            // Gas rises from piston top to cylinder head
+            int gasTopY = HEAD_Y + (int)((1.0 - cyl.gasLevel) * boreH);
+            g2.setColor(gasCol);
+            g2.fillRect(boreLeft, gasTopY, BORE_PX, pistonTopY - gasTopY + 2);
+            g2.setClip(oldClip);
+        }
+
+        // ── Combustion glow (sustained orange heat after ignition) ────────────
         if (cyl.combustionGlow > 0.0) {
-            int glowAlpha = (int)(cyl.combustionGlow * 180);
-            int glowH     = Math.max(4, pistonTopY - HEAD_Y);
+            int glowAlpha = (int)(cyl.combustionGlow * 170);
+            int glowH     = Math.max(4, boreH);
             Point2D.Float gc = new Point2D.Float(cx, HEAD_Y + glowH / 2f);
             float glowR = Math.max(BORE_PX / 2f, glowH / 2f);
             RadialGradientPaint glow = new RadialGradientPaint(gc, glowR,
@@ -262,6 +291,20 @@ public final class SimulationPanel extends JPanel {
             g2.clipRect(boreLeft, HEAD_Y, BORE_PX, glowH + 2);
             g2.setPaint(glow);
             g2.fillRect(boreLeft, HEAD_Y, BORE_PX, glowH + 2);
+            g2.setClip(oldClip);
+        }
+
+        // ── Explosion flash (shockwave ring at spark moment) ──────────────────
+        if (cyl.explosionFlash > 0.01) {
+            int flashAlpha = (int)(cyl.explosionFlash * 220);
+            int ringR = (int)((1.0 - cyl.explosionFlash) * BORE_PX / 2);
+            int ringThick = Math.max(2, (int)(cyl.explosionFlash * 8));
+            Shape oldClip = g2.getClip();
+            g2.clipRect(boreLeft, HEAD_Y, BORE_PX, boreH + 4);
+            g2.setColor(new Color(255, 255, 200, flashAlpha));
+            g2.setStroke(new BasicStroke(ringThick, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+            g2.drawOval(cx - ringR, HEAD_Y + boreH / 2 - ringR, ringR * 2, ringR * 2);
+            g2.setStroke(new BasicStroke(1.0f));
             g2.setClip(oldClip);
         }
 
@@ -544,6 +587,12 @@ public final class SimulationPanel extends JPanel {
     public void setThrottle(double t) {
         state.throttle = Math.max(0.0, Math.min(1.0, t));
     }
+
+    public void setSimSpeed(double s) {
+        state.simSpeed = Math.max(0.05, Math.min(2.0, s));
+    }
+
+    public double getSimSpeed() { return state.simSpeed; }
 
     public void togglePause()    { paused = !paused; }
     public boolean isPaused()    { return paused; }

@@ -32,6 +32,12 @@ public class EngineState {
     /** Throttle position in [0, 1]. */
     public double throttle;
 
+    /**
+     * Simulation speed multiplier applied to the wall-clock dt before physics.
+     * 1.0 = real-time; 0.25 = quarter speed (default, for educational clarity).
+     */
+    public double simSpeed = 0.25;
+
     // ── Observables ──────────────────────────────────────────────────────────
 
     /** Total instantaneous combustion torque across all cylinders (N·m). */

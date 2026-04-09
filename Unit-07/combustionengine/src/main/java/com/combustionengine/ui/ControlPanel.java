@@ -23,9 +23,12 @@ public final class ControlPanel extends JPanel {
     private final SimulationPanel sim;
 
     // ── Controls ──────────────────────────────────────────────────────────────
-    private final JComboBox<EnginePreset> presetCombo  = new JComboBox<>(EnginePreset.values());
-    private final JSlider                throttleSlider = new JSlider(0, 100, 0);
-    private final JLabel                 throttleVal    = new JLabel("0%");
+    private final JComboBox<EnginePreset> presetCombo   = new JComboBox<>(EnginePreset.values());
+    private final JSlider                throttleSlider  = new JSlider(0, 100, 0);
+    private final JLabel                 throttleVal     = new JLabel("0%");
+    // Speed: 5–200, stored as ×10 of the actual multiplier (so 25 = 0.25×, 100 = 1.0×)
+    private final JSlider                speedSlider     = new JSlider(5, 200, 25);
+    private final JLabel                 speedVal        = new JLabel("0.25×");
     private       JButton                pauseBtn;
 
     // ── Live metrics ──────────────────────────────────────────────────────────
@@ -116,6 +119,13 @@ public final class ControlPanel extends JPanel {
         throttleSlider.setMajorTickSpacing(25);
         throttleSlider.setPaintTicks(true);
         throttleSlider.setPaintLabels(false);
+        p.add(Box.createVerticalStrut(6));
+
+        // Sim speed slider
+        p.add(sliderRow("Sim speed", speedSlider, speedVal));
+        speedSlider.setMajorTickSpacing(25);
+        speedSlider.setPaintTicks(true);
+        speedSlider.setPaintLabels(false);
 
         return p;
     }
@@ -171,6 +181,12 @@ public final class ControlPanel extends JPanel {
             double t = throttleSlider.getValue() / 100.0;
             sim.setThrottle(t);
             throttleVal.setText(throttleSlider.getValue() + "%");
+        });
+
+        speedSlider.addChangeListener(e -> {
+            double s = speedSlider.getValue() / 100.0;
+            sim.setSimSpeed(s);
+            speedVal.setText(String.format("%.2f×", s));
         });
 
         presetCombo.addActionListener(e -> {
