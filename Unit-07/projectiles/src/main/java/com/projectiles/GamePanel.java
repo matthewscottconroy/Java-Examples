@@ -36,12 +36,12 @@ public final class GamePanel extends JPanel {
     public static final int HEIGHT = 620;
 
     // ── Physics ───────────────────────────────────────────────────────────────
-    private static final double GRAVITY        = 680.0;   // px/s²
+    private static final double GRAVITY        = 200.0;   // px/s²
     private static final double TARGET_FPS     = 60.0;
     private static final double DT             = 1.0 / TARGET_FPS;
     private static final int    EXPLODE_RADIUS = 55;
     private static final int    DEBRIS_COUNT   = 160;
-    private static final double LAUNCH_POWER   = 10.0;     // velocity scale
+    private static final double LAUNCH_POWER   = 5.0;     // velocity scale
 
     // ── Slingshot geometry ────────────────────────────────────────────────────
     private static final int TRUNK_X      = 115;   // centre column of trunk
