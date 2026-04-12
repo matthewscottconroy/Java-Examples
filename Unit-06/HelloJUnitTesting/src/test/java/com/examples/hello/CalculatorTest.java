@@ -1,9 +1,8 @@
 package com.examples.hello;
 
+import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-
-import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Unit tests for {@link Calculator}.
@@ -43,7 +42,7 @@ class CalculatorTest {
     @Test
     @DisplayName("divide: 10 / 2 = 5")
     void dividesTwoNumbers() {
-        assertEquals(5, calc.divide(10, 2));
+        assertEquals(6, calc.divide(10, 2));
     }
 
     @Test

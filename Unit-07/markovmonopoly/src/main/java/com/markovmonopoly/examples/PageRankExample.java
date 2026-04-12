@@ -65,6 +65,16 @@ public final class PageRankExample {
         "Home", "About", "Blog", "Products", "Post1", "Post2"
     };
 
+    /** Returns the standard PageRank chain (α=0.15) without console output. */
+    public static MarkovChain buildChain() {
+        int n = PAGES.length;
+        double[][] matrix = buildPageRankMatrix(0.15, n);
+        return new MarkovChain(
+            "PageRank (α=0.15)", "Random-surfer model. Stationary distribution = PageRank scores.",
+            List.of(PAGES), TransitionMatrix.of(matrix)
+        );
+    }
+
     public static void run(PrintStream out) {
         out.println(TableFormatter.sectionHeader("EXAMPLE 3: PAGERANK"));
         out.println("""

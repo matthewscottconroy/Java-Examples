@@ -44,6 +44,11 @@ public final class EhrenfestExample {
 
     private static final int TWO_N = 10;  // total balls (2N)
 
+    /** Returns the Ehrenfest urn chain without console output. */
+    public static MarkovChain buildChain() {
+        return buildEhrenfest(TWO_N);
+    }
+
     public static void run(PrintStream out) {
         out.println(TableFormatter.sectionHeader("EXAMPLE 4: EHRENFEST URN MODEL"));
         out.println("Setup: " + TWO_N + " balls in two urns. State = # balls in urn A (0.." + TWO_N + ").");
@@ -153,7 +158,7 @@ public final class EhrenfestExample {
             """);
     }
 
-    private static MarkovChain buildEhrenfest(int totalBalls) {
+    public static MarkovChain buildEhrenfest(int totalBalls) {
         int n = totalBalls + 1;
         double[][] matrix = new double[n][n];
 

@@ -41,6 +41,11 @@ public final class GamblersRuinExample {
 
     private static final int N = 8;   // target fortune ($8)
 
+    /** Returns the fair Gambler's Ruin chain (p=0.5) without console output. */
+    public static MarkovChain buildChain() {
+        return buildGamblersRuin(N, 0.5);
+    }
+
     public static void run(PrintStream out) {
         out.println(TableFormatter.sectionHeader("EXAMPLE 2: GAMBLER'S RUIN"));
         out.println("""

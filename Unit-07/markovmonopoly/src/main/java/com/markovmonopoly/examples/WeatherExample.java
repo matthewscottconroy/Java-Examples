@@ -41,6 +41,14 @@ public final class WeatherExample {
 
     private static final String[] STATES = { "Sunny", "Cloudy", "Rainy" };
 
+    /** Returns the Weather Model chain without producing any console output. */
+    public static MarkovChain buildChain() {
+        return MarkovChain.of(
+            "Weather Model",
+            "3-state Markov chain modeling daily weather patterns.",
+            STATES, TRANSITIONS);
+    }
+
     public static void run(PrintStream out) {
         MarkovChain chain = MarkovChain.of(
             "Weather Model",
