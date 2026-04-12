@@ -1,13 +1,17 @@
 package com.combustionengine.physics;
 
 import com.combustionengine.model.EngineConfig;
+import com.combustionengine.model.EngineType;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 class EnginePhysicsTest {
 
     private static final EngineConfig CFG =
-            new EngineConfig(0.078, 0.085, 0.140, 9.5, 4, 44.0e6, 14.7, 0.30);
+            new EngineConfig(0.078, 0.085, 0.140, 9.5, 4, 44.0e6, 14.7, 0.30, EngineType.OTTO);
+
+    private static final EngineConfig DIESEL_CFG =
+            new EngineConfig(0.081, 0.096, 0.155, 18.0, 4, 42.5e6, 22.0, 0.32, EngineType.DIESEL);
 
     // ── Kinematics ────────────────────────────────────────────────────────────
 
@@ -96,5 +100,48 @@ class EnginePhysicsTest {
         double expected = 1.0 - Math.pow(9.5, 1.0 - EnginePhysics.GAMMA);
         double actual   = EnginePhysics.thermalEfficiency(9.5);
         assertEquals(expected, actual, 1e-12);
+    }
+
+    // ── Diesel efficiency ─────────────────────────────────────────────────────
+
+    @Test
+    void dieselEfficiency_isInUnitInterval() {
+        double rco = EnginePhysics.dieselCutoffRatio(DIESEL_CFG, 0.8);
+        double eta = EnginePhysics.dieselThermalEfficiency(DIESEL_CFG.compressionRatio(), rco);
+        assertTrue(eta > 0.0 && eta < 1.0, "Diesel efficiency must be in (0, 1)");
+    }
+
+    @Test
+    void dieselEfficiency_higherThanOttoAtSameRC() {
+        // At equal compression ratios diesel is less efficient than Otto due to
+        // the cutoff ratio penalty — but higher CR diesels beat lower CR Ottos.
+        // Verify the formula: diesel at rc=18 beats Otto at rc=9.5.
+        double rco       = EnginePhysics.dieselCutoffRatio(DIESEL_CFG, 0.8);
+        double etaDiesel = EnginePhysics.dieselThermalEfficiency(18.0, rco);
+        double etaOtto   = EnginePhysics.thermalEfficiency(9.5);
+        assertTrue(etaDiesel > etaOtto,
+                "Diesel at rc=18 must be more efficient than Otto at rc=9.5");
+    }
+
+    @Test
+    void dieselEfficiency_degeneratesTo_otto_whenCutoffIsOne() {
+        // rco = 1 means zero heat addition; formula falls back to Otto efficiency
+        double etaDiesel = EnginePhysics.dieselThermalEfficiency(9.5, 1.0);
+        double etaOtto   = EnginePhysics.thermalEfficiency(9.5);
+        assertEquals(etaOtto, etaDiesel, 1e-9,
+                "Diesel efficiency with rco=1 must equal Otto efficiency");
+    }
+
+    @Test
+    void dieselCutoffRatio_isOneAtZeroThrottle() {
+        double rco = EnginePhysics.dieselCutoffRatio(DIESEL_CFG, 0.0);
+        assertEquals(1.0, rco, 1e-9, "No fuel → no heat addition → cutoff ratio = 1");
+    }
+
+    @Test
+    void dieselCutoffRatio_increasesWithThrottle() {
+        double rco25 = EnginePhysics.dieselCutoffRatio(DIESEL_CFG, 0.25);
+        double rco75 = EnginePhysics.dieselCutoffRatio(DIESEL_CFG, 0.75);
+        assertTrue(rco75 > rco25, "More fuel → larger cutoff ratio");
     }
 }

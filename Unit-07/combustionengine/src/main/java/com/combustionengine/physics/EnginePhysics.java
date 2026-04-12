@@ -5,22 +5,34 @@ import com.combustionengine.model.*;
 /**
  * <h2>Engine Physics</h2>
  * Simulates the thermodynamic cycle and crankshaft dynamics of an internal
- * combustion engine using the idealised <em>Otto cycle</em>.
+ * combustion engine.  Two cycle types are supported:
  *
- * <h3>Otto cycle (ideal)</h3>
+ * <h3>Otto cycle (spark-ignition, {@link EngineType#OTTO})</h3>
  * <pre>
- *   1 → 2  Isentropic compression    P · V^γ = const
- *   2 → 3  Isochoric heat addition   at TDC (instantaneous combustion model)
+ *   1 → 2  Isentropic compression     P · V^γ = const
+ *   2 → 3  Isochoric heat addition    at TDC (constant volume)
  *   3 → 4  Isentropic expansion
- *   4 → 1  Isochoric heat rejection  exhaust blow-down
+ *   4 → 1  Isochoric heat rejection   exhaust blow-down
  * </pre>
- *
- * <h3>Thermal efficiency</h3>
+ * Thermal efficiency:
  * <pre>
- *   η_th = 1 − r_c^(1 − γ)     r_c = compression ratio, γ = 1.35
+ *   η_Otto = 1 − r_c^(1 − γ)
  * </pre>
  *
- * <h3>Slider-crank kinematics</h3>
+ * <h3>Diesel cycle (compression-ignition, {@link EngineType#DIESEL})</h3>
+ * <pre>
+ *   1 → 2  Isentropic compression     (higher r_c than Otto)
+ *   2 → 3  Isobaric heat addition     at constant pressure (fuel injection)
+ *   3 → 4  Isentropic expansion
+ *   4 → 1  Isochoric heat rejection   exhaust blow-down
+ * </pre>
+ * Thermal efficiency:
+ * <pre>
+ *   η_Diesel = 1 − (1 / r_c^(γ−1)) · (r_co^γ − 1) / (γ · (r_co − 1))
+ * </pre>
+ * where r_co = cutoff ratio = V after heat addition / V at TDC.
+ *
+ * <h3>Slider-crank kinematics (both cycles)</h3>
  * <pre>
  *   x(φ) = r · (1 − cos φ) + l − √(l² − r²·sin²φ)
  *   V(φ) = V_c + A · x(φ)
@@ -48,6 +60,9 @@ public final class EnginePhysics {
 
     /** Specific heat at constant volume for the mixture (J / kg·K). */
     public static final double CV             = 718.0;
+
+    /** Specific heat at constant pressure: C_p = γ · C_v  (J / kg·K). */
+    public static final double CP             = GAMMA * CV;
 
     /** Atmospheric pressure (Pa). */
     public static final double P_ATM          = 101_325.0;
@@ -93,6 +108,8 @@ public final class EnginePhysics {
 
         double totalTorque = 0.0;
 
+        boolean isDiesel = state.config.engineType() == EngineType.DIESEL;
+
         for (CylinderState cyl : state.cylinders) {
             CyclePhase before = cyl.currentPhase();
 
@@ -105,17 +122,20 @@ public final class EnginePhysics {
             if (before != after) {
                 switch (after) {
                     case INTAKE -> {
-                        // Intake valve opens: start filling the bore with charge
                         cyl.gasLevel = 0.0;
                     }
                     case POWER -> {
-                        // Spark fires: combustion glow + shockwave flash
-                        cyl.combustionGlow  = Math.min(1.0, state.throttle * 1.2 + 0.1);
-                        cyl.explosionFlash  = Math.min(1.0, state.throttle * 1.1 + 0.15);
-                        cyl.gasLevel        = 1.0;
+                        cyl.combustionGlow = Math.min(1.0, state.throttle * 1.2 + 0.1);
+                        if (isDiesel) {
+                            // Compression-ignition: gradual burn, no sharp spark flash
+                            cyl.explosionFlash = 0.0;
+                        } else {
+                            // Spark-ignition: brief shockwave flash
+                            cyl.explosionFlash = Math.min(1.0, state.throttle * 1.1 + 0.15);
+                        }
+                        cyl.gasLevel = 1.0;
                     }
                     case EXHAUST -> {
-                        // Exhaust valve opens: charge starts leaving
                         cyl.gasLevel = 1.0;
                     }
                     default -> {}
@@ -125,19 +145,15 @@ public final class EnginePhysics {
             // ── Continuous per-stroke updates ─────────────────────────────────
             switch (after) {
                 case INTAKE -> {
-                    // Fill rate proportional to how fast the piston is descending
                     cyl.gasLevel = Math.min(1.0, cyl.gasLevel + dt * 4.0 * state.simSpeed);
                 }
                 case EXHAUST -> {
-                    // Purge rate proportional to piston ascending speed
                     cyl.gasLevel = Math.max(0.0, cyl.gasLevel - dt * 4.0 * state.simSpeed);
                 }
                 default -> {}
             }
 
-            // Combustion glow fades during power stroke
             cyl.combustionGlow  = Math.max(0.0, cyl.combustionGlow  - dt * 5.0);
-            // Explosion flash fades very quickly (it's a brief spark event)
             cyl.explosionFlash  = Math.max(0.0, cyl.explosionFlash  - dt * 12.0);
 
             // Slider-crank kinematics
@@ -145,10 +161,8 @@ public final class EnginePhysics {
             cyl.pistonDispM = pistonDisplacement(phi, state.config.crankRadiusM(), state.config.rodLengthM());
             cyl.volumeM3    = cylinderVolume(cyl.pistonDispM, state.config.boreAreaM2(), state.config.clearanceVolumeM3());
 
-            // Thermodynamic state for this stroke
             updateThermodynamics(cyl, state.config, state.throttle);
 
-            // Torque contribution from this cylinder
             totalTorque += cylinderTorque(cyl.pressurePa, phi,
                     state.config.crankRadiusM(), state.config.rodLengthM(),
                     state.config.boreAreaM2());
@@ -157,7 +171,6 @@ public final class EnginePhysics {
         }
 
         // ── Crankshaft dynamics ───────────────────────────────────────────────
-        // I · dω/dt = T_combustion − T_load − T_friction
         double tLoad = K_LOAD * omega;
         double tFric = K_FRIC * omega;
         double tNet  = totalTorque - tLoad - tFric;
@@ -166,7 +179,6 @@ public final class EnginePhysics {
         omega += alpha * dt;
         if (omega < 0.0) omega = 0.0;
 
-        // Starter motor: hold omega at stall threshold while throttle is applied
         if (omega < STALL_OMEGA && state.throttle > 0.02) {
             omega = STALL_OMEGA;
         }
@@ -175,7 +187,14 @@ public final class EnginePhysics {
         state.combustionTorqueNm = totalTorque;
         state.netTorqueNm        = tNet;
         state.powerW             = totalTorque * omega;
-        state.thermalEfficiency  = thermalEfficiency(state.config.compressionRatio());
+
+        // Thermal efficiency depends on cycle type
+        if (isDiesel) {
+            double rco = dieselCutoffRatio(state.config, state.throttle);
+            state.thermalEfficiency = dieselThermalEfficiency(state.config.compressionRatio(), rco);
+        } else {
+            state.thermalEfficiency = thermalEfficiency(state.config.compressionRatio());
+        }
     }
 
     // ── Kinematics ───────────────────────────────────────────────────────────
@@ -195,7 +214,7 @@ public final class EnginePhysics {
     public static double pistonDisplacement(double phi, double r, double l) {
         double sinPhi = Math.sin(phi);
         double inner  = l * l - r * r * sinPhi * sinPhi;
-        if (inner < 0.0) inner = 0.0;   // guard against floating-point underrun
+        if (inner < 0.0) inner = 0.0;
         return r * (1.0 - Math.cos(phi)) + l - Math.sqrt(inner);
     }
 
@@ -215,21 +234,16 @@ public final class EnginePhysics {
     /**
      * Updates the in-cylinder pressure and temperature for the current stroke.
      *
-     * <p>The model follows an idealised Otto cycle:
-     * <ul>
-     *   <li><b>Intake</b>: pressure = P_atm, temperature = T_intake.</li>
-     *   <li><b>Compression</b>: isentropic — P · V^γ = P_atm · V_max^γ.</li>
-     *   <li><b>Power</b>: instantaneous heat addition at TDC raises P and T;
-     *       thereafter isentropic expansion.</li>
-     *   <li><b>Exhaust</b>: pressure drops to P_atm; temperature reflects hot
-     *       exhaust gas.</li>
-     * </ul>
+     * <p>For Otto engines the power stroke uses <em>isochoric</em> heat addition
+     * (constant volume at TDC) followed by isentropic expansion.
+     *
+     * <p>For Diesel engines the power stroke uses <em>isobaric</em> heat addition
+     * (constant pressure from TDC to the cutoff volume) followed by isentropic
+     * expansion.
      */
     private static void updateThermodynamics(CylinderState cyl, EngineConfig cfg, double throttle) {
         CyclePhase phase = cyl.currentPhase();
-        double Vc   = cfg.clearanceVolumeM3();
         double Vmax = cfg.maxVolumeM3();
-        double rc   = cfg.compressionRatio();
 
         cyl.intakeOpen  = (phase == CyclePhase.INTAKE);
         cyl.exhaustOpen = (phase == CyclePhase.EXHAUST);
@@ -240,39 +254,95 @@ public final class EnginePhysics {
                 cyl.temperatureK = T_INTAKE;
             }
             case COMPRESSION -> {
-                // Isentropic from BDC: P_atm · V_max^γ = P · V^γ
                 double ratio     = Vmax / cyl.volumeM3;
                 cyl.pressurePa   = P_ATM * Math.pow(ratio, GAMMA);
                 cyl.temperatureK = T_INTAKE * Math.pow(ratio, GAMMA - 1.0);
             }
             case POWER -> {
-                // Compressed state at TDC (end of compression)
-                double P_comp = P_ATM  * Math.pow(rc, GAMMA);
-                double T_comp = T_INTAKE * Math.pow(rc, GAMMA - 1.0);
-
-                // Heat added per cycle: Q = η_c · scale · m_fuel · LHV
-                // Air mass filling the full displacement each cycle:
-                double rhoAir = P_ATM / (R_AIR * T_INTAKE);
-                double mAir   = rhoAir * cfg.displacementM3();
-                double mFuel  = throttle * mAir / cfg.airFuelRatio();
-                double Q      = COMBUSTION_ETA * HEAT_SCALE * mFuel * cfg.fuelLHV();
-
-                // Isochoric temperature rise at TDC: ΔT = Q / (m_mix · Cv)
-                double mMix   = Math.max(mAir + mFuel, 1e-15);
-                double dT     = Q / (mMix * CV);
-
-                double T_peak = T_comp + dT;
-                double P_peak = P_comp * (T_peak / T_comp);
-
-                // Isentropic expansion from TDC (V = Vc) to current volume
-                double expRatio  = cyl.volumeM3 / Vc;
-                cyl.pressurePa   = P_peak / Math.pow(expRatio, GAMMA);
-                cyl.temperatureK = T_peak / Math.pow(expRatio, GAMMA - 1.0);
+                if (cfg.engineType() == EngineType.DIESEL) {
+                    updateDieselPower(cyl, cfg, throttle);
+                } else {
+                    updateOttoPower(cyl, cfg, throttle);
+                }
             }
             case EXHAUST -> {
                 cyl.pressurePa   = P_ATM;
                 cyl.temperatureK = 700.0 + 300.0 * throttle;
             }
+        }
+    }
+
+    /**
+     * Otto POWER stroke: isochoric heat addition at TDC, then isentropic expansion.
+     *
+     * <pre>
+     *   P_peak = P_comp · (T_peak / T_comp)
+     *   P(V)   = P_peak · (V_c / V)^γ
+     * </pre>
+     */
+    private static void updateOttoPower(CylinderState cyl, EngineConfig cfg, double throttle) {
+        double Vc   = cfg.clearanceVolumeM3();
+        double rc   = cfg.compressionRatio();
+
+        double P_comp = P_ATM    * Math.pow(rc, GAMMA);
+        double T_comp = T_INTAKE * Math.pow(rc, GAMMA - 1.0);
+
+        double rhoAir = P_ATM / (R_AIR * T_INTAKE);
+        double mAir   = rhoAir * cfg.displacementM3();
+        double mFuel  = throttle * mAir / cfg.airFuelRatio();
+        double Q      = COMBUSTION_ETA * HEAT_SCALE * mFuel * cfg.fuelLHV();
+
+        double mMix   = Math.max(mAir + mFuel, 1e-15);
+        double dT     = Q / (mMix * CV);
+
+        double T_peak = T_comp + dT;
+        double P_peak = P_comp * (T_peak / T_comp);
+
+        double expRatio  = cyl.volumeM3 / Vc;
+        cyl.pressurePa   = P_peak / Math.pow(expRatio, GAMMA);
+        cyl.temperatureK = T_peak / Math.pow(expRatio, GAMMA - 1.0);
+    }
+
+    /**
+     * Diesel POWER stroke: isobaric heat addition from TDC to the cutoff
+     * volume, then isentropic expansion.
+     *
+     * <pre>
+     *   Phase A (V ≤ V_co):  P = P_comp,   T = T_comp · (V / V_c)
+     *   Phase B (V &gt; V_co):  P = P_comp · (V_co / V)^γ
+     *                         T = T_peak  · (V_co / V)^(γ−1)
+     * </pre>
+     * where V_co = V_c · r_co  and  r_co = T_peak / T_comp.
+     */
+    private static void updateDieselPower(CylinderState cyl, EngineConfig cfg, double throttle) {
+        double Vc   = cfg.clearanceVolumeM3();
+        double rc   = cfg.compressionRatio();
+
+        double P_comp = P_ATM    * Math.pow(rc, GAMMA);
+        double T_comp = T_INTAKE * Math.pow(rc, GAMMA - 1.0);
+
+        double rhoAir = P_ATM / (R_AIR * T_INTAKE);
+        double mAir   = rhoAir * cfg.displacementM3();
+        double mFuel  = throttle * mAir / cfg.airFuelRatio();
+        double Q      = COMBUSTION_ETA * HEAT_SCALE * mFuel * cfg.fuelLHV();
+
+        double mMix   = Math.max(mAir + mFuel, 1e-15);
+        // Isobaric heat addition: ΔT = Q / (m · C_p)
+        double dT     = Q / (mMix * CP);
+        double T_peak = T_comp + dT;
+        double rco    = Math.max(1.0, T_peak / T_comp);   // cutoff ratio
+        double V_co   = Vc * rco;
+
+        double V = cyl.volumeM3;
+
+        if (V <= V_co) {
+            // Isobaric phase: pressure constant, temperature rises with volume
+            cyl.pressurePa   = P_comp;
+            cyl.temperatureK = T_comp * (V / Vc);
+        } else {
+            // Isentropic expansion from the cutoff point
+            cyl.pressurePa   = P_comp * Math.pow(V_co / V, GAMMA);
+            cyl.temperatureK = T_peak * Math.pow(V_co / V, GAMMA - 1.0);
         }
     }
 
@@ -311,7 +381,7 @@ public final class EnginePhysics {
      * Otto cycle ideal thermal efficiency.
      *
      * <pre>
-     *   η_th = 1 − r_c^(1 − γ)
+     *   η_Otto = 1 − r_c^(1 − γ)
      * </pre>
      *
      * @param compressionRatio volumetric compression ratio
@@ -322,21 +392,67 @@ public final class EnginePhysics {
     }
 
     /**
+     * Diesel cycle ideal thermal efficiency.
+     *
+     * <pre>
+     *   η_Diesel = 1 − (1 / r_c^(γ−1)) · (r_co^γ − 1) / (γ · (r_co − 1))
+     * </pre>
+     *
+     * @param compressionRatio volumetric compression ratio r_c
+     * @param cutoffRatio      cutoff ratio r_co = V after heat addition / V at TDC (&gt; 1)
+     * @return thermal efficiency in [0, 1]
+     */
+    public static double dieselThermalEfficiency(double compressionRatio, double cutoffRatio) {
+        if (cutoffRatio <= 1.0) return thermalEfficiency(compressionRatio); // degenerate case
+        double term = (Math.pow(cutoffRatio, GAMMA) - 1.0) / (GAMMA * (cutoffRatio - 1.0));
+        return 1.0 - term / Math.pow(compressionRatio, GAMMA - 1.0);
+    }
+
+    /**
+     * Computes the diesel cutoff ratio r_co = T_peak / T_comp for the given
+     * throttle position.  Used for efficiency calculations and the P-V diagram.
+     *
+     * @param cfg      engine configuration
+     * @param throttle throttle position in [0, 1]
+     * @return cutoff ratio (≥ 1.0)
+     */
+    public static double dieselCutoffRatio(EngineConfig cfg, double throttle) {
+        double rc     = cfg.compressionRatio();
+        double T_comp = T_INTAKE * Math.pow(rc, GAMMA - 1.0);
+        double rhoAir = P_ATM / (R_AIR * T_INTAKE);
+        double mAir   = rhoAir * cfg.displacementM3();
+        double mFuel  = throttle * mAir / cfg.airFuelRatio();
+        double Q      = COMBUSTION_ETA * HEAT_SCALE * mFuel * cfg.fuelLHV();
+        double mMix   = Math.max(mAir + mFuel, 1e-15);
+        double dT     = Q / (mMix * CP);
+        return Math.max(1.0, 1.0 + dT / T_comp);
+    }
+
+    /**
      * Computes the peak in-cylinder pressure at full throttle for the given
-     * configuration. Used to scale the P-V diagram axis.
+     * configuration.  Used to scale the P-V diagram y-axis.
+     *
+     * <ul>
+     *   <li>Otto: P_peak &gt; P_comp (isochoric heat addition raises pressure).</li>
+     *   <li>Diesel: P_peak = P_comp (isobaric — pressure stays at compression value).</li>
+     * </ul>
      */
     public static double peakPressureRef(EngineConfig cfg) {
         double rc     = cfg.compressionRatio();
-        double P_comp = P_ATM   * Math.pow(rc, GAMMA);
-        double T_comp = T_INTAKE * Math.pow(rc, GAMMA - 1.0);
+        double P_comp = P_ATM * Math.pow(rc, GAMMA);
 
+        if (cfg.engineType() == EngineType.DIESEL) {
+            return P_comp;
+        }
+
+        // Otto: isochoric heat addition at TDC raises pressure above P_comp
+        double T_comp = T_INTAKE * Math.pow(rc, GAMMA - 1.0);
         double rhoAir = P_ATM / (R_AIR * T_INTAKE);
         double mAir   = rhoAir * cfg.displacementM3();
         double mFuel  = mAir / cfg.airFuelRatio();
         double Q      = COMBUSTION_ETA * HEAT_SCALE * mFuel * cfg.fuelLHV();
         double mMix   = Math.max(mAir + mFuel, 1e-15);
         double dT     = Q / (mMix * CV);
-
         double T_peak = T_comp + dT;
         return P_comp * (T_peak / T_comp);
     }

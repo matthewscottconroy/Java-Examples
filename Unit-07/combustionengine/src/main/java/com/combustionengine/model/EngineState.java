@@ -49,7 +49,7 @@ public class EngineState {
     /** Instantaneous indicated power (W). */
     public double powerW;
 
-    /** Otto-cycle thermal efficiency for the current compression ratio. */
+    /** Thermal efficiency for the current cycle type and operating conditions. */
     public double thermalEfficiency;
 
     // ── Cylinders ────────────────────────────────────────────────────────────

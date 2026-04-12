@@ -9,20 +9,23 @@ package com.combustionengine.model;
  * @param strokeM          piston stroke (TDC-to-BDC distance) in metres
  * @param rodLengthM       connecting-rod centre-to-centre length in metres
  * @param compressionRatio volumetric compression ratio V_max / V_min  (≥ 2)
- * @param numCylinders     number of cylinders (1, 2, or 4)
+ * @param numCylinders     number of cylinders (1, 2, 4, or 6)
  * @param fuelLHV          lower heating value of the fuel in J/kg
- * @param airFuelRatio     stoichiometric air-to-fuel mass ratio
+ * @param airFuelRatio     effective air-to-fuel mass ratio used in heat-release calc
  * @param inertiaKgM2      effective rotational inertia of crank + flywheel (kg·m²)
+ * @param engineType       combustion cycle type ({@link EngineType#OTTO} or
+ *                         {@link EngineType#DIESEL})
  */
 public record EngineConfig(
-        double boreM,
-        double strokeM,
-        double rodLengthM,
-        double compressionRatio,
-        int    numCylinders,
-        double fuelLHV,
-        double airFuelRatio,
-        double inertiaKgM2) {
+        double     boreM,
+        double     strokeM,
+        double     rodLengthM,
+        double     compressionRatio,
+        int        numCylinders,
+        double     fuelLHV,
+        double     airFuelRatio,
+        double     inertiaKgM2,
+        EngineType engineType) {
 
     /** Crank throw (half-stroke) in metres. */
     public double crankRadiusM() { return strokeM / 2.0; }

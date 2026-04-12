@@ -225,15 +225,29 @@ public final class SimulationPanel extends JPanel {
             g2.setStroke(new BasicStroke(1.0f));
         }
 
-        // Spark plug (centre)
-        boolean sparking = cyl.combustionGlow > 0.08;
-        g2.setColor(sparking ? new Color(255, 245, 60) : new Color(50, 52, 58));
-        g2.fillOval(cx - 5, PORT_Y + 1, 10, 10);
-        if (sparking) {
-            g2.setColor(new Color(255, 200, 0, (int)(cyl.combustionGlow * 120)));
-            g2.setStroke(new BasicStroke(1.5f));
-            g2.drawOval(cx - 7, PORT_Y - 1, 14, 14);
-            g2.setStroke(new BasicStroke(1.0f));
+        // Centre port: spark plug (Otto) or fuel injector (Diesel)
+        boolean firing   = cyl.combustionGlow > 0.08;
+        boolean isDiesel = state.config.engineType() == com.combustionengine.model.EngineType.DIESEL;
+        if (isDiesel) {
+            // Injector tip — white/blue pulse when fuel is being injected
+            g2.setColor(firing ? new Color(180, 220, 255) : new Color(45, 50, 60));
+            g2.fillRect(cx - 3, PORT_Y + 1, 6, 10);
+            if (firing) {
+                g2.setColor(new Color(160, 210, 255, (int)(cyl.combustionGlow * 140)));
+                g2.setStroke(new BasicStroke(1.5f));
+                g2.drawRect(cx - 4, PORT_Y, 8, 12);
+                g2.setStroke(new BasicStroke(1.0f));
+            }
+        } else {
+            // Spark plug — yellow/orange flash at ignition
+            g2.setColor(firing ? new Color(255, 245, 60) : new Color(50, 52, 58));
+            g2.fillOval(cx - 5, PORT_Y + 1, 10, 10);
+            if (firing) {
+                g2.setColor(new Color(255, 200, 0, (int)(cyl.combustionGlow * 120)));
+                g2.setStroke(new BasicStroke(1.5f));
+                g2.drawOval(cx - 7, PORT_Y - 1, 14, 14);
+                g2.setStroke(new BasicStroke(1.0f));
+            }
         }
 
         // Exhaust port (right)
@@ -430,15 +444,15 @@ public final class SimulationPanel extends JPanel {
             g2.drawString(String.format("%.1f", pVal / 1e6), 2, sy + 4);
         }
 
-        // ── Otto cycle curves ─────────────────────────────────────────────────
+        // ── Cycle curves ──────────────────────────────────────────────────────
         double rc     = cfg.compressionRatio();
         double P_comp = EnginePhysics.P_ATM * Math.pow(rc, EnginePhysics.GAMMA);
         double P_peak = EnginePhysics.peakPressureRef(cfg);
-        double P_4    = EnginePhysics.P_ATM * (P_peak / P_comp);
+        boolean isDiesel = cfg.engineType() == com.combustionengine.model.EngineType.DIESEL;
 
         int STEPS = 120;
 
-        // 1 → 2: Compression (adiabatic, V_max → V_c), blue
+        // 1 → 2: Compression (adiabatic, V_max → V_c), blue — same for both cycles
         g2.setColor(C_INTAKE.darker());
         g2.setStroke(new BasicStroke(1.8f));
         int[] compX = new int[STEPS + 1], compY = new int[STEPS + 1];
@@ -450,26 +464,55 @@ public final class SimulationPanel extends JPanel {
         }
         g2.drawPolyline(compX, compY, STEPS + 1);
 
-        // 2 → 3: Isochoric heat addition (vertical line at V_c), red
-        g2.setColor(C_POWER);
         int vcX = vToX(Vc, Vc, vRange, px, pw);
-        g2.drawLine(vcX, pToY(P_comp, Pmax, py, ph), vcX, pToY(P_peak, Pmax, py, ph));
 
-        // 3 → 4: Expansion (adiabatic, V_c → V_max), orange
-        g2.setColor(C_COMPRESS.darker());
-        int[] expX = new int[STEPS + 1], expY = new int[STEPS + 1];
-        for (int i = 0; i <= STEPS; i++) {
-            double V = Vc + (double) i / STEPS * (Vmax - Vc);
-            double P = P_peak * Math.pow(Vc / V, EnginePhysics.GAMMA);
-            expX[i] = vToX(V, Vc, vRange, px, pw);
-            expY[i] = pToY(P, Pmax, py, ph);
+        if (isDiesel) {
+            // 2 → 3: Isobaric heat addition (horizontal at P_comp, V_c → V_co), red
+            double rco  = EnginePhysics.dieselCutoffRatio(cfg, 1.0);  // full throttle ref
+            double V_co = Vc * rco;
+            int vcoX    = vToX(V_co, Vc, vRange, px, pw);
+            int pcompY  = pToY(P_comp, Pmax, py, ph);
+            g2.setColor(C_POWER);
+            g2.drawLine(vcX, pcompY, vcoX, pcompY);
+
+            // 3 → 4: Isentropic expansion (V_co → V_max), orange
+            g2.setColor(C_COMPRESS.darker());
+            int[] expX = new int[STEPS + 1], expY = new int[STEPS + 1];
+            for (int i = 0; i <= STEPS; i++) {
+                double V = V_co + (double) i / STEPS * (Vmax - V_co);
+                double P = P_comp * Math.pow(V_co / V, EnginePhysics.GAMMA);
+                expX[i] = vToX(V, Vc, vRange, px, pw);
+                expY[i] = pToY(P, Pmax, py, ph);
+            }
+            g2.drawPolyline(expX, expY, STEPS + 1);
+
+            // 4 → 1: Isochoric heat rejection (vertical at V_max), grey
+            double P_4 = P_comp * Math.pow(V_co / Vmax, EnginePhysics.GAMMA);
+            g2.setColor(C_EXHAUST.darker());
+            int vmaxX = vToX(Vmax, Vc, vRange, px, pw);
+            g2.drawLine(vmaxX, pToY(P_4, Pmax, py, ph), vmaxX, pToY(EnginePhysics.P_ATM, Pmax, py, ph));
+        } else {
+            // 2 → 3: Isochoric heat addition (vertical at V_c), red
+            g2.setColor(C_POWER);
+            g2.drawLine(vcX, pToY(P_comp, Pmax, py, ph), vcX, pToY(P_peak, Pmax, py, ph));
+
+            // 3 → 4: Isentropic expansion (V_c → V_max), orange
+            g2.setColor(C_COMPRESS.darker());
+            int[] expX = new int[STEPS + 1], expY = new int[STEPS + 1];
+            for (int i = 0; i <= STEPS; i++) {
+                double V = Vc + (double) i / STEPS * (Vmax - Vc);
+                double P = P_peak * Math.pow(Vc / V, EnginePhysics.GAMMA);
+                expX[i] = vToX(V, Vc, vRange, px, pw);
+                expY[i] = pToY(P, Pmax, py, ph);
+            }
+            g2.drawPolyline(expX, expY, STEPS + 1);
+
+            // 4 → 1: Isochoric heat rejection (vertical at V_max), grey
+            double P_4 = EnginePhysics.P_ATM * (P_peak / P_comp);
+            g2.setColor(C_EXHAUST.darker());
+            int vmaxX = vToX(Vmax, Vc, vRange, px, pw);
+            g2.drawLine(vmaxX, pToY(P_4, Pmax, py, ph), vmaxX, pToY(EnginePhysics.P_ATM, Pmax, py, ph));
         }
-        g2.drawPolyline(expX, expY, STEPS + 1);
-
-        // 4 → 1: Isochoric heat rejection (vertical line at V_max), grey
-        g2.setColor(C_EXHAUST.darker());
-        int vmaxX = vToX(Vmax, Vc, vRange, px, pw);
-        g2.drawLine(vmaxX, pToY(P_4, Pmax, py, ph), vmaxX, pToY(EnginePhysics.P_ATM, Pmax, py, ph));
 
         // P_atm baseline
         g2.setColor(new Color(60, 70, 90));
@@ -478,6 +521,44 @@ public final class SimulationPanel extends JPanel {
         int patmY = pToY(EnginePhysics.P_ATM, Pmax, py, ph);
         g2.drawLine(px, patmY, px + pw, patmY);
         g2.setStroke(new BasicStroke(1.0f));
+
+        // ── State point markers ①–④ ──────────────────────────────────────────
+        // Compute corner positions for the cycle
+        int pt1X = vToX(Vmax, Vc, vRange, px, pw);
+        int pt1Y = pToY(EnginePhysics.P_ATM, Pmax, py, ph);   // ① BDC, P_atm
+        int pt2X = vToX(Vc, Vc, vRange, px, pw);
+        int pt2Y = pToY(P_comp, Pmax, py, ph);                 // ② TDC, end of compression
+
+        int pt3X, pt3Y, pt4X, pt4Y;
+        double P_4ref;
+        if (isDiesel) {
+            double rcoRef = EnginePhysics.dieselCutoffRatio(cfg, 1.0);
+            double VcoRef = Vc * rcoRef;
+            pt3X  = vToX(VcoRef, Vc, vRange, px, pw);
+            pt3Y  = pToY(P_comp, Pmax, py, ph);                // ③ end of isobaric combustion
+            P_4ref = P_comp * Math.pow(VcoRef / Vmax, EnginePhysics.GAMMA);
+        } else {
+            pt3X  = vToX(Vc, Vc, vRange, px, pw);
+            pt3Y  = pToY(P_peak, Pmax, py, ph);                // ③ TDC, peak pressure
+            P_4ref = EnginePhysics.P_ATM * (P_peak / P_comp);
+        }
+        pt4X = vToX(Vmax, Vc, vRange, px, pw);
+        pt4Y = pToY(P_4ref, Pmax, py, ph);                     // ④ BDC, end of expansion
+
+        // Draw each numbered circle; offset labels away from the cycle curve
+        int[][] statePoints  = { {pt1X, pt1Y}, {pt2X, pt2Y}, {pt3X, pt3Y}, {pt4X, pt4Y} };
+        int[][] labelOffsets = { {-12, 12}, {6, 12}, {6, -6}, {-12, -6} };
+        g2.setFont(new Font(Font.MONOSPACED, Font.BOLD, 9));
+        for (int i = 0; i < 4; i++) {
+            int sx = statePoints[i][0], sy = statePoints[i][1];
+            // Dark fill so numbers are legible over grid lines
+            g2.setColor(new Color(14, 16, 24));
+            g2.fillOval(sx - 5, sy - 5, 10, 10);
+            g2.setColor(new Color(190, 200, 220));
+            g2.drawOval(sx - 5, sy - 5, 10, 10);
+            g2.drawString(String.valueOf(i + 1),
+                    sx + labelOffsets[i][0], sy + labelOffsets[i][1]);
+        }
 
         // ── Live dot for cylinder 0 ───────────────────────────────────────────
         if (!state.cylinders.isEmpty()) {
@@ -501,10 +582,47 @@ public final class SimulationPanel extends JPanel {
             g2.fillOval(dotX - 4, dotY - 4, 8, 8);
         }
 
+        // ── Legend panel ──────────────────────────────────────────────────────
+        // Explains each coloured segment; placed in the lower-right of the plot
+        String heatDesc = isDiesel ? "2\u21923  Combustion (const. pressure)"
+                                   : "2\u21923  Combustion (const. volume)";
+        String[] legendLines = {
+            "1\u21922  Compression (adiabatic)",
+            heatDesc,
+            "3\u21924  Expansion / Power stroke",
+            "4\u21921  Exhaust blow-down",
+            "\u25cf     Cylinder 1 live state"
+        };
+        Color[] legendColors = {
+            C_INTAKE.darker(),
+            C_POWER,
+            C_COMPRESS.darker(),
+            C_EXHAUST.darker(),
+            new Color(190, 200, 225)
+        };
+
+        int lx = px + pw - 198;
+        int ly = py + ph - 62;
+        int lh = legendLines.length * 13 + 8;
+
+        g2.setColor(new Color(10, 12, 22, 200));
+        g2.fillRoundRect(lx - 5, ly - 12, 202, lh, 5, 5);
+        g2.setColor(new Color(50, 60, 82));
+        g2.setStroke(new BasicStroke(0.8f));
+        g2.drawRoundRect(lx - 5, ly - 12, 202, lh, 5, 5);
+        g2.setStroke(new BasicStroke(1.0f));
+
+        g2.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 9));
+        for (int i = 0; i < legendLines.length; i++) {
+            g2.setColor(legendColors[i]);
+            g2.drawString(legendLines[i], lx, ly + i * 13);
+        }
+
         // ── Diagram title ─────────────────────────────────────────────────────
         g2.setColor(new Color(160, 170, 195));
         g2.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 11));
-        g2.drawString("P–V Diagram  (Cyl 1)", px + 4, py - 5);
+        String cycleLabel = isDiesel ? "Diesel Cycle" : "Otto Cycle";
+        g2.drawString("P–V Diagram  (" + cycleLabel + ", Cyl 1)", px + 4, py - 5);
 
         // Efficiency annotation
         g2.setColor(new Color(120, 200, 120));
