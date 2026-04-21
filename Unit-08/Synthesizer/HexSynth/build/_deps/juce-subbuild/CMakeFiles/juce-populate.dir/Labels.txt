@@ -1,0 +1,14 @@
+# Target labels
+ juce-populate
+# Source files and their labels
+/home/matthewscott/Development/Teaching/CSC210/Spring-2026/labs/extra-credit-lab-03/Synthesizer/HexSynth/build/_deps/juce-subbuild/CMakeFiles/juce-populate
+/home/matthewscott/Development/Teaching/CSC210/Spring-2026/labs/extra-credit-lab-03/Synthesizer/HexSynth/build/_deps/juce-subbuild/CMakeFiles/juce-populate.rule
+/home/matthewscott/Development/Teaching/CSC210/Spring-2026/labs/extra-credit-lab-03/Synthesizer/HexSynth/build/_deps/juce-subbuild/CMakeFiles/juce-populate-complete.rule
+/home/matthewscott/Development/Teaching/CSC210/Spring-2026/labs/extra-credit-lab-03/Synthesizer/HexSynth/build/_deps/juce-subbuild/juce-populate-prefix/src/juce-populate-stamp/juce-populate-build.rule
+/home/matthewscott/Development/Teaching/CSC210/Spring-2026/labs/extra-credit-lab-03/Synthesizer/HexSynth/build/_deps/juce-subbuild/juce-populate-prefix/src/juce-populate-stamp/juce-populate-configure.rule
+/home/matthewscott/Development/Teaching/CSC210/Spring-2026/labs/extra-credit-lab-03/Synthesizer/HexSynth/build/_deps/juce-subbuild/juce-populate-prefix/src/juce-populate-stamp/juce-populate-download.rule
+/home/matthewscott/Development/Teaching/CSC210/Spring-2026/labs/extra-credit-lab-03/Synthesizer/HexSynth/build/_deps/juce-subbuild/juce-populate-prefix/src/juce-populate-stamp/juce-populate-install.rule
+/home/matthewscott/Development/Teaching/CSC210/Spring-2026/labs/extra-credit-lab-03/Synthesizer/HexSynth/build/_deps/juce-subbuild/juce-populate-prefix/src/juce-populate-stamp/juce-populate-mkdir.rule
+/home/matthewscott/Development/Teaching/CSC210/Spring-2026/labs/extra-credit-lab-03/Synthesizer/HexSynth/build/_deps/juce-subbuild/juce-populate-prefix/src/juce-populate-stamp/juce-populate-patch.rule
+/home/matthewscott/Development/Teaching/CSC210/Spring-2026/labs/extra-credit-lab-03/Synthesizer/HexSynth/build/_deps/juce-subbuild/juce-populate-prefix/src/juce-populate-stamp/juce-populate-test.rule
+/home/matthewscott/Development/Teaching/CSC210/Spring-2026/labs/extra-credit-lab-03/Synthesizer/HexSynth/build/_deps/juce-subbuild/juce-populate-prefix/src/juce-populate-stamp/juce-populate-update.rule

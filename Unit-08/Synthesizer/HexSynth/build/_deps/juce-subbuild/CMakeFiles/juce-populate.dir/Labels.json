@@ -1,0 +1,46 @@
+{
+	"sources" : 
+	[
+		{
+			"file" : "/home/matthewscott/Development/Teaching/CSC210/Spring-2026/labs/extra-credit-lab-03/Synthesizer/HexSynth/build/_deps/juce-subbuild/CMakeFiles/juce-populate"
+		},
+		{
+			"file" : "/home/matthewscott/Development/Teaching/CSC210/Spring-2026/labs/extra-credit-lab-03/Synthesizer/HexSynth/build/_deps/juce-subbuild/CMakeFiles/juce-populate.rule"
+		},
+		{
+			"file" : "/home/matthewscott/Development/Teaching/CSC210/Spring-2026/labs/extra-credit-lab-03/Synthesizer/HexSynth/build/_deps/juce-subbuild/CMakeFiles/juce-populate-complete.rule"
+		},
+		{
+			"file" : "/home/matthewscott/Development/Teaching/CSC210/Spring-2026/labs/extra-credit-lab-03/Synthesizer/HexSynth/build/_deps/juce-subbuild/juce-populate-prefix/src/juce-populate-stamp/juce-populate-build.rule"
+		},
+		{
+			"file" : "/home/matthewscott/Development/Teaching/CSC210/Spring-2026/labs/extra-credit-lab-03/Synthesizer/HexSynth/build/_deps/juce-subbuild/juce-populate-prefix/src/juce-populate-stamp/juce-populate-configure.rule"
+		},
+		{
+			"file" : "/home/matthewscott/Development/Teaching/CSC210/Spring-2026/labs/extra-credit-lab-03/Synthesizer/HexSynth/build/_deps/juce-subbuild/juce-populate-prefix/src/juce-populate-stamp/juce-populate-download.rule"
+		},
+		{
+			"file" : "/home/matthewscott/Development/Teaching/CSC210/Spring-2026/labs/extra-credit-lab-03/Synthesizer/HexSynth/build/_deps/juce-subbuild/juce-populate-prefix/src/juce-populate-stamp/juce-populate-install.rule"
+		},
+		{
+			"file" : "/home/matthewscott/Development/Teaching/CSC210/Spring-2026/labs/extra-credit-lab-03/Synthesizer/HexSynth/build/_deps/juce-subbuild/juce-populate-prefix/src/juce-populate-stamp/juce-populate-mkdir.rule"
+		},
+		{
+			"file" : "/home/matthewscott/Development/Teaching/CSC210/Spring-2026/labs/extra-credit-lab-03/Synthesizer/HexSynth/build/_deps/juce-subbuild/juce-populate-prefix/src/juce-populate-stamp/juce-populate-patch.rule"
+		},
+		{
+			"file" : "/home/matthewscott/Development/Teaching/CSC210/Spring-2026/labs/extra-credit-lab-03/Synthesizer/HexSynth/build/_deps/juce-subbuild/juce-populate-prefix/src/juce-populate-stamp/juce-populate-test.rule"
+		},
+		{
+			"file" : "/home/matthewscott/Development/Teaching/CSC210/Spring-2026/labs/extra-credit-lab-03/Synthesizer/HexSynth/build/_deps/juce-subbuild/juce-populate-prefix/src/juce-populate-stamp/juce-populate-update.rule"
+		}
+	],
+	"target" : 
+	{
+		"labels" : 
+		[
+			"juce-populate"
+		],
+		"name" : "juce-populate"
+	}
+}

@@ -1,0 +1,3 @@
+/home/matthewscott/Development/Teaching/CSC210/Spring-2026/labs/extra-credit-lab-03/Synthesizer/HexSynth/build/_deps/juce-subbuild/CMakeFiles/juce-populate.dir
+/home/matthewscott/Development/Teaching/CSC210/Spring-2026/labs/extra-credit-lab-03/Synthesizer/HexSynth/build/_deps/juce-subbuild/CMakeFiles/edit_cache.dir
+/home/matthewscott/Development/Teaching/CSC210/Spring-2026/labs/extra-credit-lab-03/Synthesizer/HexSynth/build/_deps/juce-subbuild/CMakeFiles/rebuild_cache.dir

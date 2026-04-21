@@ -1,0 +1,2 @@
+# Hashes of file build rules.
+9cf4cbc45e22a0eb6adcf6b71f4bdeb5 HexSynth_artefacts/JuceLibraryCode/JuceHeader.h
